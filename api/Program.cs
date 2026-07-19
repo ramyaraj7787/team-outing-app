@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using TeamOutingApi.Auth;
 using TeamOutingApi.Data;
+using TeamOutingApi.Sms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,21 @@ static string ToNpgsqlConnectionString(string url)
         TrustServerCertificate = true,
     };
     return builder.ConnectionString;
+}
+
+// ---- SMS: real provider if configured via env vars, dev console fallback otherwise ----
+var twilioSid = Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID");
+var twilioToken = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN");
+var twilioFrom = Environment.GetEnvironmentVariable("TWILIO_FROM_NUMBER");
+builder.Services.AddHttpClient();
+if (!string.IsNullOrEmpty(twilioSid) && !string.IsNullOrEmpty(twilioToken) && !string.IsNullOrEmpty(twilioFrom))
+{
+    builder.Services.AddSingleton<ISmsSender>(sp =>
+        new TwilioSmsSender(sp.GetRequiredService<IHttpClientFactory>().CreateClient(), twilioSid, twilioToken, twilioFrom));
+}
+else
+{
+    builder.Services.AddSingleton<ISmsSender, DevConsoleSmsSender>();
 }
 
 // ---- Auth: simple opaque bearer-token sessions issued after OTP verification ----

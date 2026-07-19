@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: team-outing-api
+    runtime: docker
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        sync: false   # paste your Neon (or other Postgres) connection string here after deploying
+      - key: ALLOWED_ORIGINS
+        sync: false   # paste your Vercel frontend URL here, e.g. https://team-outing.vercel.app
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Optional — only needed once you connect a real SMS provider (see README).
+      # Leave unset and the app safely falls back to on-screen dev-mode OTPs.
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false

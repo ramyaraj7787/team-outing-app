@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Team Outing API
 
 .NET 8 Web API backend for the Team Outing planner. Ships with SQLite (zero setup)
@@ -59,35 +58,35 @@ All other endpoints below require `Authorization: Bearer {token}`.
 
 ## Deploying for free (so your team can actually use it)
 
-**Backend — Render.com (free tier)**
+### One-click deploy (recommended)
+
+Once this code is pushed to a GitHub repo, add this to your repo's README —
+replace `YOUR_USERNAME/YOUR_REPO` with your actual repo path:
+
+```markdown
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/YOUR_USERNAME/YOUR_REPO)
+```
+
+Clicking it reads `render.yaml` (already included) and provisions the web
+service automatically via Docker. You'll be prompted in Render's UI to fill
+in a few values it can't guess:
+- `DATABASE_URL` — a Postgres connection string (see Neon setup below)
+- `ALLOWED_ORIGINS` — your frontend's URL, once you have one (Step 2)
+- `TWILIO_*` — optional, only needed for real SMS (see "Introducing real OTP" below)
+
+**Get a free Postgres database first** (takes 1 minute): go to
+[neon.tech](https://neon.tech) → sign up → New Project → copy the connection
+string (starts with `postgres://`) → that's your `DATABASE_URL`.
+
+### Manual deploy (same result, more control)
+
 1. Push this folder to a GitHub repo.
-2. On Render: New → Web Service → connect the repo.
-3. Runtime: Docker, or "Native" with build command `dotnet publish -c Release -o out`
-   and start command `dotnet out/TeamOutingApi.dll`.
-4. Add environment variable `ASPNETCORE_URLS=http://0.0.0.0:10000` (Render's expected port).
-5. SQLite works but Render's free disk isn't guaranteed persistent across deploys —
-   for anything beyond a demo, switch to Postgres (see below).
-
-**Swap in Supabase Postgres (recommended for a real shared team app)**
-1. Create a free Supabase project → copy the connection string.
-2. `dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL`
-3. In `Program.cs`, replace `UseSqlite(...)` with:
-   ```csharp
-   options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
-   ```
-4. Put the Supabase connection string in `appsettings.json` under `ConnectionStrings:Postgres`
-   (or better, as an environment variable / Render secret).
-
-**Frontend**
-- Deploy the React prototype to Vercel or Netlify (free).
-- Replace the in-memory `useState` data with `fetch` calls to this API's base URL.
-- Update `AllowedOrigins` in `appsettings.json` to your deployed frontend URL.
+2. On Render: New → Web Service → connect the repo → Render detects the
+   `Dockerfile` automatically.
+3. Add the same environment variables listed above.
+4. Deploy.
 
 **Photos**
 - This API stores only a photo `Url` string, not the image bytes.
 - Use Supabase Storage or Cloudinary (both free tiers) to upload the actual image,
   then save the returned URL via `POST /api/trips/{id}/photos`.
-=======
-# team-outing-app
-An application to plan and execute team outings
->>>>>>> f66b11eeaf33de95ce855d56c919ab9241b121ff

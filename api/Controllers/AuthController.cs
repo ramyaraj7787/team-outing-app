@@ -5,6 +5,7 @@ using TeamOutingApi.Auth;
 using TeamOutingApi.Data;
 using TeamOutingApi.Dtos;
 using TeamOutingApi.Models;
+using TeamOutingApi.Sms;
 
 namespace TeamOutingApi.Controllers;
 
@@ -13,24 +14,24 @@ namespace TeamOutingApi.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ISmsSender _sms;
     private static readonly Random _rng = new();
 
-    public AuthController(AppDbContext db) => _db = db;
+    public AuthController(AppDbContext db, ISmsSender sms) { _db = db; _sms = sms; }
 
     private static string NormalizePhone(string phone) =>
         new string(phone.Where(c => char.IsDigit(c) || c == '+').ToArray());
 
     // Step 1: request a one-time code for a phone number.
-    // No SMS provider is wired up yet, so the code is returned directly in the
-    // response (clearly marked devOtp) instead of being texted. Once you connect
-    // a provider (Twilio, MSG91, etc.) call it here and stop returning devOtp.
+    // If a real provider (ISmsSender.IsConfigured) is wired up, this actually texts
+    // the code and the response omits it. Otherwise it falls back to dev mode:
+    // the code is returned directly in the response, clearly marked.
     [HttpPost("request-otp")]
     public async Task<IActionResult> RequestOtp(RequestOtpRequest req)
     {
         var phone = NormalizePhone(req.PhoneNumber);
         if (phone.Length < 7) return BadRequest("Enter a valid mobile number.");
 
-        // invalidate any earlier unconsumed codes for this number
         var stale = await _db.OtpCodes.Where(o => o.PhoneNumber == phone && !o.Consumed).ToListAsync();
         foreach (var s in stale) s.Consumed = true;
 
@@ -38,8 +39,15 @@ public class AuthController : ControllerBase
         _db.OtpCodes.Add(new OtpCode { PhoneNumber = phone, Code = code, ExpiresAt = DateTime.UtcNow.AddMinutes(5) });
         await _db.SaveChangesAsync();
 
-        Console.WriteLine($"[DEV OTP] {phone} -> {code} (expires in 5 min)");
+        var sent = await _sms.SendAsync(phone, $"Your Team Outings verification code is {code}. It expires in 5 minutes.");
 
+        if (_sms.IsConfigured)
+        {
+            if (!sent) return StatusCode(502, new { message = "Couldn't send the SMS. Check the server logs and provider credentials." });
+            return Ok(new { message = "OTP sent." });
+        }
+
+        // dev fallback — no real provider configured
         return Ok(new { message = "OTP generated.", devOtp = code, devNote = "No SMS provider connected yet — this code is shown here instead of texted." });
     }
 
